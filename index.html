@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="할일알람">
+<title>할일 알람</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f5f8;
+  --surface: #ffffff;
+  --surface2: #f0f0f5;
+  --border: #e4e4ec;
+  --border2: #d0d0df;
+  --accent: #3b6ef8;
+  --accent-light: #eef2ff;
+  --accent2: #8b5cf6;
+  --green: #10b981;
+  --green-light: #ecfdf5;
+  --red: #ef4444;
+  --red-light: #fef2f2;
+  --yellow: #f59e0b;
+  --text: #18181f;
+  --text2: #6b6b85;
+  --text3: #a0a0b8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;min-height:100vh;}
+.app{max-width:480px;margin:0 auto;padding:0 0 90px;}
+
+/* 헤더 */
+.header{padding:18px 20px 12px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.logo{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:3px;text-transform:uppercase;font-weight:500;}
+.clock-badge{font-family:'DM Mono',monospace;font-size:12px;color:var(--text3);background:var(--surface2);padding:3px 10px;border-radius:20px;border:1px solid var(--border);}
+.next-alarm{display:flex;align-items:center;gap:6px;background:var(--accent-light);border:1px solid rgba(59,110,248,0.15);border-radius:8px;padding:7px 12px;}
+.next-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:1.5px;font-weight:500;}
+.next-title{font-size:13px;font-weight:500;color:var(--accent);flex:1;}
+.next-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);}
+
+/* 알림 배너 */
+.notif-banner{margin:12px 16px 0;padding:10px 14px;background:var(--accent-light);border:1px solid rgba(59,110,248,0.2);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;}
+.notif-banner.granted{background:var(--green-light);border-color:rgba(16,185,129,0.25);cursor:default;}
+.notif-banner-text{font-size:12px;color:var(--text2);line-height:1.4;}
+.notif-banner-btn{font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap;}
+.notif-banner.granted .notif-banner-btn{color:var(--green);}
+
+/* 오늘 배너 */
+.today-banner{margin:12px 16px 4px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);}
+.today-banner-left{font-size:11px;color:var(--text3);}
+.today-banner-date{font-family:'DM Mono',monospace;font-size:13px;color:var(--text);margin-top:3px;font-weight:500;}
+.today-banner-count{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:var(--accent);line-height:1;}
+.today-banner-sub{font-size:10px;color:var(--text3);text-align:right;margin-top:2px;}
+
+/* 타임라인 */
+.timeline{padding:4px 16px 0;}
+.tl-item{display:flex;gap:10px;padding:3px 0;position:relative;}
+.tl-item::before{content:'';position:absolute;left:52px;top:28px;bottom:-3px;width:1px;background:var(--border);}
+.tl-item:last-child::before{display:none;}
+.tl-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);width:42px;padding-top:12px;flex-shrink:0;text-align:right;}
+.tl-dot-wrap{display:flex;flex-direction:column;align-items:center;padding-top:13px;flex-shrink:0;}
+.tl-dot{width:10px;height:10px;border-radius:50%;background:var(--border2);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border2);z-index:1;}
+.tl-item.passed .tl-dot{background:var(--text3);box-shadow:none;}
+.tl-item.current .tl-dot{background:var(--accent);box-shadow:0 0 0 3px rgba(59,110,248,0.2);}
+.tl-body{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-bottom:6px;box-shadow:var(--shadow);cursor:pointer;transition:border-color 0.15s;}
+.tl-body:hover{border-color:var(--accent);}
+.tl-item.current .tl-body{border-color:rgba(59,110,248,0.3);background:var(--accent-light);}
+.tl-item.passed .tl-body{background:var(--surface2);box-shadow:none;}
+.tl-name{font-size:13px;font-weight:500;color:var(--text);}
+.tl-item.passed .tl-name{color:var(--text3);text-decoration:line-through;}
+.tl-item.current .tl-name{color:var(--accent);}
+.tl-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* 섹션 헤더 */
+.section-header{padding:14px 16px 8px;display:flex;align-items:center;gap:8px;}
+.section-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;}
+.section-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);}
+.section-line{flex:1;height:1px;background:var(--border);}
+
+/* 전체 카드 */
+.card-list{padding:0 12px;display:flex;flex-direction:column;gap:6px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:11px;box-shadow:var(--shadow);position:relative;overflow:hidden;cursor:pointer;transition:border-color 0.15s;animation:fadeUp 0.22s ease both;}
+.card:hover{border-color:var(--accent);}
+.card.today{border-color:rgba(59,110,248,0.25);background:linear-gradient(135deg,#fff 75%,var(--accent-light));}
+.card-stripe{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:12px 0 0 12px;}
+.card.today .card-stripe{background:var(--accent);}
+.card:not(.today) .card-stripe{background:var(--border2);}
+.card-icon{font-size:19px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border-radius:9px;border:1px solid var(--border);flex-shrink:0;}
+.card-body{flex:1;min-width:0;}
+.card-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.card-meta{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.card-dot{width:3px;height:3px;border-radius:50%;background:var(--border2);}
+.card-time{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:var(--text2);flex-shrink:0;}
+.card.today .card-time{color:var(--accent);}
+.card-actions{display:flex;gap:4px;flex-shrink:0;}
+.btn-icon{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:background 0.15s;}
+.btn-icon:hover{background:var(--surface);}
+.btn-icon.del:hover{background:var(--red-light);border-color:rgba(239,68,68,0.3);}
+
+/* FAB */
+.fab{position:fixed;bottom:80px;right:calc(50% - 240px + 16px);width:52px;height:52px;border-radius:16px;background:var(--accent);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(59,110,248,0.4);cursor:pointer;z-index:150;border:none;transition:transform 0.15s,box-shadow 0.15s;}
+.fab:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(59,110,248,0.5);}
+@media(max-width:480px){.fab{right:16px;}}
+
+/* 모달 오버레이 */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:500;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.modal{width:100%;max-width:480px;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 20px 32px;transform:translateY(100%);transition:transform 0.25s cubic-bezier(.32,0,.15,1);max-height:90vh;overflow-y:auto;}
+.overlay.open .modal{transform:translateY(0);}
+.modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px;}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:18px;}
+
+/* 폼 */
+.form-group{margin-bottom:14px;}
+.form-label{font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-family:'DM Mono',monospace;margin-bottom:5px;display:block;}
+.form-input,.form-select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:'Noto Sans KR',sans-serif;color:var(--text);background:var(--surface);outline:none;transition:border-color 0.15s;}
+.form-input:focus,.form-select:focus{border-color:var(--accent);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+/* 이모지 선택 */
+.emoji-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.emoji-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
+.emoji-btn.selected{border-color:var(--accent);background:var(--accent-light);}
+
+/* 저장 버튼 */
+.btn-save{width:100%;padding:13px;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;font-family:'Noto Sans KR',sans-serif;border:none;cursor:pointer;margin-top:8px;transition:opacity 0.15s;}
+.btn-save:hover{opacity:0.9;}
+.btn-del-full{width:100%;padding:11px;border-radius:12px;background:var(--red-light);color:var(--red);font-size:14px;font-weight:600;font-family:'Noto Sans KR',sans-serif;border:1px solid rgba(239,68,68,0.25);cursor:pointer;margin-top:8px;}
+
+/* 설정 */
+.settings-section{padding:0 16px 16px;}
+.settings-title{font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;padding:18px 0 8px;font-family:'DM Mono',monospace;}
+.settings-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;box-shadow:var(--shadow);}
+.settings-item-label{font-size:13px;font-weight:500;color:var(--text);}
+.settings-item-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.toggle{width:44px;height:26px;background:var(--border2);border-radius:13px;cursor:pointer;position:relative;transition:background 0.25s;flex-shrink:0;}
+.toggle.on{background:var(--accent);}
+.toggle::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:white;top:3px;left:3px;transition:transform 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.15);}
+.toggle.on::after{transform:translateX(18px);}
+.link-btn{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;white-space:nowrap;}
+
+/* 하단 탭바 */
+.bottom-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--surface);border-top:1px solid var(--border);padding:8px 0 env(safe-area-inset-bottom,8px);display:flex;justify-content:space-around;z-index:200;box-shadow:0 -4px 16px rgba(0,0,0,0.06);}
+.bar-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 24px;cursor:pointer;color:var(--text3);transition:color 0.2s;}
+.bar-btn.active{color:var(--accent);}
+.bar-icon{font-size:19px;}
+.bar-label{font-size:10px;font-weight:500;}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.tl-item{animation:fadeUp 0.2s ease both;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">ALARM</div>
+      <div class="clock-badge" id="clock">--:--:--</div>
+    </div>
+    <div class="next-alarm">
+      <span class="next-label">NEXT</span>
+      <span class="next-title" id="next-name">로딩중...</span>
+      <span class="next-time" id="next-time"></span>
+    </div>
+  </div>
+
+  <!-- 오늘 탭 -->
+  <div id="page-today" class="page">
+    <div id="notif-banner" class="notif-banner" onclick="requestNotif()">
+      <div class="notif-banner-text" id="notif-text">🔔 브라우저 알림을 허용하면 실시간 알람을 받을 수 있어요</div>
+      <div class="notif-banner-btn" id="notif-btn">허용하기</div>
+    </div>
+    <div class="today-banner">
+      <div>
+        <div class="today-banner-left">오늘의 일정</div>
+        <div class="today-banner-date" id="today-date">--</div>
+      </div>
+      <div style="text-align:right">
+        <div class="today-banner-count" id="today-count">0</div>
+        <div class="today-banner-sub">건의 알람</div>
+      </div>
+    </div>
+    <div class="timeline" id="today-timeline"></div>
+  </div>
+
+  <!-- 전체 탭 -->
+  <div id="page-all" class="page" style="display:none">
+    <div class="section-header">
+      <span class="section-label">전체 일정</span>
+      <span class="section-count" id="all-count"></span>
+      <div class="section-line"></div>
+    </div>
+    <div class="card-list" id="all-list"></div>
+  </div>
+
+  <!-- 설정 탭 -->
+  <div id="page-settings" class="page" style="display:none">
+    <div class="settings-section">
+      <div class="settings-title">알림 설정</div>
+      <div class="settings-item">
+        <div>
+          <div class="settings-item-label">브라우저 푸시 알림</div>
+          <div class="settings-item-sub" id="notif-status-text">상태 확인중...</div>
+        </div>
+        <div class="toggle" id="notif-toggle" onclick="toggleNotif()"></div>
+      </div>
+      <div class="settings-item" onclick="testNotif()" style="cursor:pointer">
+        <div>
+          <div class="settings-item-label">알림 테스트</div>
+          <div class="settings-item-sub">지금 바로 테스트 알림 전송</div>
+        </div>
+        <div class="link-btn">전송 →</div>
+      </div>
+
+      <div class="settings-title">데이터 관리</div>
+      <div class="settings-item" onclick="backupData()" style="cursor:pointer">
+        <div>
+          <div class="settings-item-label">📥 백업 받기</div>
+          <div class="settings-item-sub">alarm-backup.json 파일로 저장</div>
+        </div>
+        <div class="link-btn">다운로드 →</div>
+      </div>
+      <div class="settings-item" onclick="document.getElementById('restore-input').click()" style="cursor:pointer">
+        <div>
+          <div class="settings-item-label">📤 백업 복원하기</div>
+          <div class="settings-item-sub">JSON 파일을 불러와 복원</div>
+        </div>
+        <div class="link-btn">불러오기 →</div>
+      </div>
+      <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)">
+
+      <div class="settings-title">앱 정보</div>
+      <div class="settings-item">
+        <div>
+          <div class="settings-item-label">등록된 알람 수</div>
+          <div class="settings-item-sub">저장된 총 항목</div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;color:var(--accent);font-weight:500" id="total-count-setting">--</div>
+      </div>
+      <div class="settings-item" onclick="installPWA()" style="cursor:pointer">
+        <div>
+          <div class="settings-item-label">홈 화면에 설치</div>
+          <div class="settings-item-sub">앱처럼 사용할 수 있어요</div>
+        </div>
+        <div class="link-btn" style="color:var(--accent2)">설치 →</div>
+      </div>
+
+      <div class="settings-title">주의사항</div>
+      <div class="settings-item" style="flex-direction:column;align-items:flex-start">
+        <div class="settings-item-sub" style="line-height:1.8;font-size:12px">
+          • 브라우저가 열려 있어야 알림이 옵니다<br>
+          • 여러 기기에서 쓰려면 백업 파일을 공유하세요<br>
+          • 구글 캘린더 알림과 함께 사용 권장
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB 추가 버튼 -->
+<button class="fab" id="fab-btn" onclick="openModal()" title="알람 추가">＋</button>
+
+<!-- 하단 탭바 -->
+<div class="bottom-bar">
+  <div class="bar-btn active" id="btn-today" onclick="switchTab('today')">
+    <div class="bar-icon">📅</div><div class="bar-label">오늘</div>
+  </div>
+  <div class="bar-btn" id="btn-all" onclick="switchTab('all')">
+    <div class="bar-icon">📋</div><div class="bar-label">전체</div>
+  </div>
+  <div class="bar-btn" id="btn-settings" onclick="switchTab('settings')">
+    <div class="bar-icon">⚙️</div><div class="bar-label">설정</div>
+  </div>
+</div>
+
+<!-- 추가/수정 모달 -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">알람 추가</div>
+
+    <div class="form-group">
+      <label class="form-label">이모지</label>
+      <div class="emoji-grid" id="emoji-grid"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">이름</label>
+      <input type="text" class="form-input" id="f-name" placeholder="할일 이름 입력">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">반복 유형</label>
+      <select class="form-select" id="f-type" onchange="typeChanged()">
+        <option value="daily">매일</option>
+        <option value="weekly">매주</option>
+        <option value="monthly">매월</option>
+        <option value="yearly">매년</option>
+        <option value="quarterly">분기마다 (3·6·9·12월)</option>
+        <option value="holiday">명절 1주 전</option>
+      </select>
+    </div>
+
+    <div id="f-dow-wrap" class="form-group" style="display:none">
+      <label class="form-label">요일</label>
+      <select class="form-select" id="f-dow">
+        <option value="0">일요일</option>
+        <option value="1">월요일</option>
+        <option value="2">화요일</option>
+        <option value="3">수요일</option>
+        <option value="4">목요일</option>
+        <option value="5">금요일</option>
+        <option value="6">토요일</option>
+      </select>
+    </div>
+
+    <div id="f-day-wrap" class="form-group" style="display:none">
+      <label class="form-label">날짜 (일)</label>
+      <input type="number" class="form-input" id="f-day" min="1" max="31" placeholder="예: 1">
+    </div>
+
+    <div id="f-monthday-wrap" class="form-group" style="display:none">
+      <label class="form-label">월 / 일</label>
+      <div class="form-row">
+        <input type="number" class="form-input" id="f-month" min="1" max="12" placeholder="월 (예: 10)">
+        <input type="number" class="form-input" id="f-mday" min="1" max="31" placeholder="일 (예: 3)">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">시간</label>
+      <div class="form-row">
+        <select class="form-select" id="f-ampm">
+          <option value="am">오전</option>
+          <option value="pm">오후</option>
+        </select>
+        <select class="form-select" id="f-hour">
+          <!-- JS로 채움 -->
+        </select>
+        <select class="form-select" id="f-min">
+          <!-- JS로 채움 -->
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-save" id="btn-save" onclick="saveTask()">저장</button>
+    <button class="btn-del-full" id="btn-del" style="display:none" onclick="deleteTask()">🗑️ 이 알람 삭제</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// 기본 데이터 (최초 1회만 사용)
+// =============================================
+const DEFAULT_TASKS = [
+  {id:1,name:'월급계산',icon:'💰',type:'monthly',day:1,hour:15,min:0},
+  {id:2,name:'스카이벤트',icon:'🌠',type:'monthly',day:1,hour:8,min:40},
+  {id:3,name:'스카이벤트',icon:'🌠',type:'monthly',day:28,hour:8,min:40},
+  {id:4,name:'스카이벤트출력비치',icon:'🖨️',type:'monthly',day:1,hour:8,min:0},
+  {id:5,name:'스카이벤트문자',icon:'📱',type:'monthly',day:2,hour:9,min:30},
+  {id:6,name:'스카리뷰댓글',icon:'⭐',type:'weekly',dow:0,hour:15,min:0},
+  {id:7,name:'퇴실처리',icon:'🚪',type:'daily',hour:23,min:0},
+  {id:8,name:'학시시험일정비치',icon:'📚',type:'yearly',month:1,day:1,hour:14,min:0},
+  {id:9,name:'커피머신청소',icon:'☕',type:'weekly',dow:6,hour:15,min:0},
+  {id:10,name:'사물함관리',icon:'🔒',type:'weekly',dow:6,hour:15,min:20},
+  {id:11,name:'원두주문',icon:'🫘',type:'weekly',dow:6,hour:15,min:40},
+  {id:12,name:'매니저인센',icon:'💼',type:'monthly',day:1,hour:9,min:30},
+  {id:13,name:'매니저휴가',icon:'🏖️',type:'yearly',month:10,day:3,hour:10,min:30},
+  {id:14,name:'키카경쟁사',icon:'🔍',type:'quarterly',hour:11,min:0},
+  {id:15,name:'키카네이버순위',icon:'📊',type:'weekly',dow:6,hour:12,min:0},
+  {id:16,name:'우편물',icon:'📨',type:'weekly',dow:1,hour:19,min:0},
+  {id:17,name:'메일확인',icon:'📧',type:'daily',hour:10,min:0},
+  {id:18,name:'주문재고',icon:'📦',type:'daily',hour:8,min:50},
+  {id:19,name:'광고세팅',icon:'📰',type:'daily',hour:9,min:5},
+  {id:20,name:'할인쿠폰',icon:'🎫',type:'monthly',day:28,hour:17,min:50},
+  {id:21,name:'맵핑',icon:'🗺️',type:'daily',hour:18,min:0},
+  {id:22,name:'광고세팅2',icon:'📡',type:'daily',hour:18,min:20},
+  {id:23,name:'공복유지',icon:'🍽️',type:'daily',hour:19,min:0},
+  {id:24,name:'네이버가구매',icon:'🛍️',type:'weekly',dow:5,hour:18,min:40},
+  {id:25,name:'쿠팡관리계획',icon:'🛒',type:'daily',hour:22,min:0},
+  {id:26,name:'명절선물',icon:'🎁',type:'holiday',hour:19,min:0},
+];
+
+const EMOJIS = ['💰','🌠','🖨️','📱','⭐','🚪','📚','☕','🔒','🫘','💼','🏖️','🔍','📊','📨','📧','📦','📰','🎫','🗺️','📡','🍽️','🛍️','🛒','🎁','📋','✅','🔔','⏰','📌','🗓️','💡','🏃','🧹','💊','🛠️','📞','🎯','🧾','💳'];
+
+// =============================================
+// 스토리지
+// =============================================
+function loadTasks() {
+  try {
+    const raw = localStorage.getItem('alarm_tasks');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  // 최초 실행: 기본 데이터 저장
+  saveTasks(DEFAULT_TASKS);
+  return JSON.parse(JSON.stringify(DEFAULT_TASKS));
+}
+function saveTasks(tasks) {
+  localStorage.setItem('alarm_tasks', JSON.stringify(tasks));
+}
+function nextId(tasks) {
+  return tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+}
+
+let TASKS = loadTasks();
+
+// =============================================
+// 헬퍼
+// =============================================
+const pad = n => String(n).padStart(2,'0');
+const typeLabel = t => ({daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년',quarterly:'분기마다',holiday:'명절 1주 전'}[t.type]||'');
+function dayLabel(t) {
+  if(t.type==='weekly') return ['일','월','화','수','목','금','토'][t.dow]+'요일';
+  if(t.type==='monthly') return t.day+'일';
+  if(t.type==='yearly') return t.month+'월 '+t.day+'일';
+  if(t.type==='quarterly') return '3·6·9·12월 5일';
+  return '';
+}
+function timeStr(h,m) {
+  const ap=h<12?'오전':'오후';
+  const hh=h===0?12:h>12?h-12:h;
+  return `${ap} ${hh}:${pad(m)}`;
+}
+
+function getTodayTasks(now) {
+  const dow=now.getDay(),day=now.getDate(),month=now.getMonth()+1;
+  return TASKS.filter(t=>{
+    if(t.type==='daily') return true;
+    if(t.type==='weekly') return t.dow===dow;
+    if(t.type==='monthly') return t.day===day;
+    if(t.type==='yearly') return t.month===month&&t.day===day;
+    if(t.type==='quarterly') return [3,6,9,12].includes(month)&&day===5;
+    return false;
+  }).sort((a,b)=>(a.hour*60+a.min)-(b.hour*60+b.min));
+}
+
+function getNextAlarm(now) {
+  const tasks=getTodayTasks(now);
+  const cur=now.getHours()*60+now.getMinutes();
+  const rem=tasks.filter(t=>t.hour*60+t.min>cur);
+  if(rem.length){
+    const n=rem[0],d=n.hour*60+n.min-cur,h=Math.floor(d/60),m=d%60;
+    return {name:n.name,icon:n.icon,diff:h>0?`${h}시간 ${m}분 후`:`${m}분 후`};
+  }
+  const tmr=new Date(now);tmr.setDate(tmr.getDate()+1);
+  const tmrT=getTodayTasks(tmr);
+  if(tmrT.length){const n=tmrT[0];return {name:n.name,icon:n.icon,diff:'내일 '+timeStr(n.hour,n.min)};}
+  return null;
+}
+
+// =============================================
+// 렌더링
+// =============================================
+function renderToday() {
+  const now=new Date(),tasks=getTodayTasks(now),cur=now.getHours()*60+now.getMinutes();
+  const wd=['일','월','화','수','목','금','토'];
+  document.getElementById('today-date').textContent=`${now.getMonth()+1}월 ${now.getDate()}일 (${wd[now.getDay()]})`;
+  document.getElementById('today-count').textContent=tasks.length;
+  const tl=document.getElementById('today-timeline');
+  if(!tasks.length){tl.innerHTML='<div class="empty">오늘 예정된 알람이 없어요<br><span style="font-size:11px;margin-top:4px;display:block">+ 버튼으로 추가해보세요</span></div>';return;}
+  tl.innerHTML=tasks.map((t,i)=>{
+    const tm=t.hour*60+t.min;
+    const cls=tm<cur?'passed':Math.abs(tm-cur)<=30?'current':'future';
+    return `<div class="tl-item ${cls}" style="animation-delay:${i*0.04}s">
+      <div class="tl-time">${pad(t.hour)}:${pad(t.min)}</div>
+      <div class="tl-dot-wrap"><div class="tl-dot"></div></div>
+      <div class="tl-body" onclick="openModal(${t.id})">
+        <div class="tl-name">${t.icon} ${t.name}</div>
+        <div class="tl-sub">${timeStr(t.hour,t.min)}</div>
+      </div></div>`;
+  }).join('');
+}
+
+function renderAll() {
+  const now=new Date(),todayIds=new Set(getTodayTasks(now).map(t=>t.id));
+  document.getElementById('all-count').textContent=TASKS.length+'개';
+  document.getElementById('total-count-setting').textContent=TASKS.length;
+  document.getElementById('all-list').innerHTML=TASKS.map((t,i)=>{
+    const isToday=todayIds.has(t.id),dl=dayLabel(t);
+    return `<div class="card ${isToday?'today':''}" style="animation-delay:${i*0.025}s" onclick="openModal(${t.id})">
+      <div class="card-stripe"></div>
+      <div class="card-icon">${t.icon}</div>
+      <div class="card-body">
+        <div class="card-title">${t.name}</div>
+        <div class="card-meta">
+          <span>${typeLabel(t)}</span>
+          ${dl?`<div class="card-dot"></div><span>${dl}</span>`:''}
+          ${isToday?`<div class="card-dot"></div><span style="color:var(--accent);font-weight:500">오늘</span>`:''}
+        </div>
+      </div>
+      <div class="card-time">${pad(t.hour)}:${pad(t.min)}</div>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(tab) {
+  ['today','all','settings'].forEach(p=>{
+    document.getElementById('page-'+p).style.display=p===tab?'block':'none';
+    document.getElementById('btn-'+p).className='bar-btn'+(p===tab?' active':'');
+  });
+  document.getElementById('fab-btn').style.display=tab==='settings'?'none':'flex';
+  if(tab==='all') renderAll();
+  if(tab==='today') renderToday();
+  if(tab==='settings') document.getElementById('total-count-setting').textContent=TASKS.length;
+}
+
+// =============================================
+// 시계 & 알람 체크
+// =============================================
+function updateClock() {
+  const now=new Date();
+  document.getElementById('clock').textContent=`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const next=getNextAlarm(now);
+  if(next){
+    document.getElementById('next-name').textContent=next.icon+' '+next.name;
+    document.getElementById('next-time').textContent=next.diff;
+  }
+}
+function checkAlarms() {
+  if(Notification.permission!=='granted') return;
+  const now=new Date();
+  getTodayTasks(now).forEach(t=>{
+    if(t.hour===now.getHours()&&t.min===now.getMinutes()&&now.getSeconds()<6)
+      new Notification(`⏰ ${t.name}`,{body:`${timeStr(t.hour,t.min)} 알람입니다!`,tag:'alarm-'+t.id,requireInteraction:true});
+  });
+}
+
+// =============================================
+// 모달 (추가/수정)
+// =============================================
+let editingId = null;
+let selectedEmoji = '⏰';
+
+function initModalForm() {
+  // 시간 옵션
+  const hSel = document.getElementById('f-hour');
+  hSel.innerHTML = Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}시</option>`).join('');
+  const mSel = document.getElementById('f-min');
+  mSel.innerHTML = Array.from({length:60},(_,i)=>`<option value="${i}">${pad(i)}분</option>`).join('');
+
+  // 이모지 그리드
+  const grid = document.getElementById('emoji-grid');
+  grid.innerHTML = EMOJIS.map(e=>`<div class="emoji-btn ${e===selectedEmoji?'selected':''}" onclick="selectEmoji('${e}')">${e}</div>`).join('');
+}
+
+function selectEmoji(e) {
+  selectedEmoji = e;
+  document.querySelectorAll('.emoji-btn').forEach(b=>{
+    b.classList.toggle('selected', b.textContent===e);
+  });
+}
+
+function typeChanged() {
+  const type = document.getElementById('f-type').value;
+  document.getElementById('f-dow-wrap').style.display = type==='weekly' ? 'block' : 'none';
+  document.getElementById('f-day-wrap').style.display = type==='monthly' ? 'block' : 'none';
+  document.getElementById('f-monthday-wrap').style.display = type==='yearly' ? 'block' : 'none';
+}
+
+function openModal(id = null) {
+  editingId = id;
+  document.getElementById('modal-title').textContent = id ? '알람 수정' : '알람 추가';
+  document.getElementById('btn-del').style.display = id ? 'block' : 'none';
+
+  initModalForm();
+
+  if (id) {
+    const t = TASKS.find(x=>x.id===id);
+    if (!t) return;
+    selectedEmoji = t.icon;
+    document.getElementById('f-name').value = t.name;
+    document.getElementById('f-type').value = t.type;
+    typeChanged();
+
+    // 요일
+    if(t.type==='weekly') document.getElementById('f-dow').value = t.dow;
+    if(t.type==='monthly') document.getElementById('f-day').value = t.day;
+    if(t.type==='yearly'){
+      document.getElementById('f-month').value = t.month;
+      document.getElementById('f-mday').value = t.day;
+    }
+
+    // 시간
+    const h = t.hour, m = t.min;
+    document.getElementById('f-ampm').value = h<12?'am':'pm';
+    const h12 = h===0?12:h>12?h-12:h;
+    document.getElementById('f-hour').value = h12;
+    document.getElementById('f-min').value = m;
+
+    // 이모지 재렌더
+    document.getElementById('emoji-grid').innerHTML = EMOJIS.map(e=>`<div class="emoji-btn ${e===t.icon?'selected':''}" onclick="selectEmoji('${e}')">${e}</div>`).join('');
+  } else {
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-type').value = 'daily';
+    typeChanged();
+    document.getElementById('f-ampm').value = 'am';
+    document.getElementById('f-hour').value = 9;
+    document.getElementById('f-min').value = 0;
+  }
+
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function overlayClick(e) {
+  if(e.target===document.getElementById('overlay')) closeModal();
+}
+
+function saveTask() {
+  const name = document.getElementById('f-name').value.trim();
+  if(!name){alert('이름을 입력해주세요!');return;}
+
+  const type = document.getElementById('f-type').value;
+  const ampm = document.getElementById('f-ampm').value;
+  let hour = parseInt(document.getElementById('f-hour').value);
+  const min = parseInt(document.getElementById('f-min').value);
+
+  // 24시간 변환
+  if(ampm==='am'&&hour===12) hour=0;
+  else if(ampm==='pm'&&hour!==12) hour+=12;
+
+  const task = {icon:selectedEmoji, name, type, hour, min};
+
+  if(type==='weekly') task.dow = parseInt(document.getElementById('f-dow').value);
+  if(type==='monthly') task.day = parseInt(document.getElementById('f-day').value)||1;
+  if(type==='yearly'){
+    task.month = parseInt(document.getElementById('f-month').value)||1;
+    task.day = parseInt(document.getElementById('f-mday').value)||1;
+  }
+  if(type==='quarterly'||type==='daily'||type==='holiday') {}
+
+  if(editingId) {
+    const idx = TASKS.findIndex(x=>x.id===editingId);
+    if(idx>=0){task.id=editingId;TASKS[idx]=task;}
+  } else {
+    task.id = nextId(TASKS);
+    TASKS.push(task);
+  }
+
+  saveTasks(TASKS);
+  closeModal();
+  renderToday();
+  if(document.getElementById('page-all').style.display!=='none') renderAll();
+  document.getElementById('total-count-setting').textContent=TASKS.length;
+}
+
+function deleteTask() {
+  if(!editingId) return;
+  if(!confirm('이 알람을 삭제할까요?')) return;
+  TASKS = TASKS.filter(t=>t.id!==editingId);
+  saveTasks(TASKS);
+  closeModal();
+  renderToday();
+  if(document.getElementById('page-all').style.display!=='none') renderAll();
+}
+
+// =============================================
+// 백업 / 복원
+// =============================================
+function backupData() {
+  const data = {
+    version: 1,
+    exported: new Date().toISOString(),
+    tasks: TASKS
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `alarm-backup-${new Date().toLocaleDateString('ko-KR').replace(/\. /g,'-').replace('.','')}json`;
+  a.click();
+}
+
+function restoreData(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const tasks = data.tasks || data; // 배열 직접 or {tasks:[]}
+      if(!Array.isArray(tasks)) throw new Error('형식 오류');
+      if(!confirm(`백업 파일에서 ${tasks.length}개 알람을 복원할까요?\n현재 데이터는 덮어씌워집니다.`)) return;
+      TASKS = tasks;
+      saveTasks(TASKS);
+      renderToday();
+      document.getElementById('total-count-setting').textContent=TASKS.length;
+      alert('✅ 복원 완료!');
+    } catch(err) {
+      alert('파일을 읽을 수 없어요. alarm-backup.json 파일인지 확인해주세요.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// =============================================
+// 알림
+// =============================================
+async function requestNotif() {
+  if(Notification.permission==='granted') return;
+  await Notification.requestPermission();
+  updateNotifUI();
+  if(Notification.permission==='granted') testNotif();
+}
+function toggleNotif(){if(Notification.permission!=='granted') requestNotif();}
+function testNotif(){
+  if(Notification.permission!=='granted'){alert('먼저 알림 허용을 해주세요!');return;}
+  new Notification('✅ 할일 알람 테스트',{body:'알림이 정상 작동합니다! 🎉',tag:'test'});
+}
+function updateNotifUI(){
+  const p=Notification.permission;
+  const banner=document.getElementById('notif-banner');
+  const toggle=document.getElementById('notif-toggle');
+  const st=document.getElementById('notif-status-text');
+  if(p==='granted'){
+    banner.className='notif-banner granted';
+    document.getElementById('notif-text').textContent='✅ 알림이 활성화되어 있어요';
+    document.getElementById('notif-btn').textContent='켜짐';
+    toggle.className='toggle on';
+    st.textContent='알림 허용됨 — 정시에 알람이 울립니다';
+  }else if(p==='denied'){
+    banner.style.display='none';toggle.className='toggle';
+    st.textContent='알림 거부됨 — 브라우저 설정에서 허용해주세요';
+  }else{
+    toggle.className='toggle';
+    st.textContent='알림 미허용 — 위 배너를 눌러 허용하세요';
+  }
+}
+
+// =============================================
+// PWA
+// =============================================
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+function installPWA(){
+  if(deferredPrompt) deferredPrompt.prompt();
+  else alert('홈 화면에 추가하려면:\niOS: 공유 버튼 → 홈 화면에 추가\nAndroid: 브라우저 메뉴 → 앱 설치');
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// =============================================
+// 초기화
+// =============================================
+renderToday();
+updateClock();
+updateNotifUI();
+setInterval(updateClock,1000);
+setInterval(checkAlarms,5000);
+setInterval(renderToday,60000);
+</script>
+</body>
+</html>
